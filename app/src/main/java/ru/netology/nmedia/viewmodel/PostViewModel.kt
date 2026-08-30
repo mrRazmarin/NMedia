@@ -1,23 +1,21 @@
 package ru.netology.nmedia.viewmodel
 
 import android.app.Application
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import ru.netology.nmedia.dto.Post
 import ru.netology.nmedia.model.FeedModel
 import ru.netology.nmedia.repository.PostRepository
-import ru.netology.nmedia.repository.PostRepositoryRoomImpl
+import ru.netology.nmedia.repository.PostRepositoryOkHttpImpl
 import ru.netology.nmedia.util.SingleLiveEvent
 import kotlin.concurrent.thread
 
 private val empty = Post(
-    id = 0,
-    author = "",
-    content = "",
-    published = "",
-    likes = 0,
-    likedByMe = false
+    id = 0, author = "", content = "", published = "", likes = 0, likedByMe = false
 )
 
 class PostViewModel(application: Application) : AndroidViewModel(application) {
@@ -30,9 +28,9 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
     private val _postCreated = SingleLiveEvent<Unit>()
     val postCreated: LiveData<Unit>
         get() = _postCreated
-    private val repository: PostRepository = PostRepositoryRoomImpl(_data)
+    private val repository: PostRepository = PostRepositoryOkHttpImpl()
 
-    init{
+    init {
         load()
     }
 
@@ -40,7 +38,7 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
         thread {
             _data.postValue(FeedModel(loading = true))
 
-            val state =  try {
+            val state = try {
                 val posts = repository.getAll()
 
                 FeedModel(posts = posts, empty = posts.isEmpty())
@@ -67,13 +65,39 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun edit(post: Post) {
-        edited.value = post
+        thread {
+            try {
+                edited.postValue(post)
+            } catch (e: Exception) {
+                Log.e("NET_E", e.stackTraceToString())
+            }
+
+        }
     }
 
     fun likeById(id: Long) {
         thread {
-            repository.likeById(id)
+            try {
+                val updatedPost = repository.likeById(id)
+
+                Handler(Looper.getMainLooper()).post {
+                    val current = _data.value ?: return@post
+                    val newPost = current.posts.map {
+                        if (it.id == id) updatedPost
+                        else it
+                    }
+                    _data.value = current.copy(posts = newPost)
+                }
+            } catch (_: Exception) {
+
+            }
         }
     }
-    fun removeById(id: Long) = repository.removeById(id)
+
+    fun removeById(id: Long) {
+        thread {
+            repository.removeById(id)
+            load()
+        }
+    }
 }
