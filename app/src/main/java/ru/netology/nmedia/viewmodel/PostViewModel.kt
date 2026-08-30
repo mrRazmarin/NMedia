@@ -22,9 +22,6 @@ private val empty = Post(
 
 class PostViewModel(application: Application) : AndroidViewModel(application) {
     // упрощённый вариант
-    private val repository: PostRepository = PostRepositoryRoomImpl(
-        //AppDb.getInstance(application).postDao
-    )
     private val _data = MutableLiveData(FeedModel())
     val data: LiveData<FeedModel>
         get() = _data
@@ -33,6 +30,7 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
     private val _postCreated = SingleLiveEvent<Unit>()
     val postCreated: LiveData<Unit>
         get() = _postCreated
+    private val repository: PostRepository = PostRepositoryRoomImpl(_data)
 
     init{
         load()
@@ -72,6 +70,10 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
         edited.value = post
     }
 
-    fun likeById(id: Long) = repository.likeById(id)
+    fun likeById(id: Long) {
+        thread {
+            repository.likeById(id)
+        }
+    }
     fun removeById(id: Long) = repository.removeById(id)
 }
