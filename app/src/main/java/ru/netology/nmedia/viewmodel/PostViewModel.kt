@@ -1,12 +1,14 @@
 package ru.netology.nmedia.viewmodel
 
 import android.app.Application
-import androidx.lifecycle.*
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import ru.netology.nmedia.dto.Post
 import ru.netology.nmedia.model.FeedModel
-import ru.netology.nmedia.repository.*
+import ru.netology.nmedia.repository.PostRepository
+import ru.netology.nmedia.repository.PostRepositoryImpl
 import ru.netology.nmedia.util.SingleLiveEvent
-import java.io.IOException
 import kotlin.concurrent.thread
 
 private val empty = Post(
