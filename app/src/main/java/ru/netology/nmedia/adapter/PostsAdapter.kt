@@ -1,14 +1,18 @@
 package ru.netology.nmedia.adapter
 
+import android.util.Log
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.widget.PopupMenu
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import ru.netology.nmedia.R
 import ru.netology.nmedia.databinding.CardPostBinding
 import ru.netology.nmedia.dto.Post
+import ru.netology.nmedia.dto.getAvatarUrl
 
 interface OnInteractionListener {
     fun onLike(post: Post) {}
@@ -44,6 +48,21 @@ class PostViewHolder(
             // в адаптере
             like.isChecked = post.likedByMe
             like.text = "${post.likes}"
+
+            val avatarUrl = post.getAvatarUrl()
+            if (avatarUrl == null) {
+                // Если аватара нет – скрываем ImageView
+                avatar.visibility = View.GONE
+            } else {
+                avatar.visibility = View.VISIBLE
+                Glide.with(avatar)
+                    .load(avatarUrl)
+                    .placeholder(R.drawable.ic_avatar_placeholder)
+                    .error(R.drawable.ic_avatar_error)
+                    .timeout(10_000)
+                    .circleCrop()
+                    .into(avatar)
+            }
 
             menu.setOnClickListener {
                 PopupMenu(it.context, it).apply {

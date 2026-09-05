@@ -7,7 +7,7 @@ import androidx.lifecycle.MutableLiveData
 import ru.netology.nmedia.dto.Post
 import ru.netology.nmedia.model.FeedModel
 import ru.netology.nmedia.repository.PostRepository
-import ru.netology.nmedia.repository.PostRepositoryImpl
+import ru.netology.nmedia.repository.PostRepositoryOkHttpImpl
 import ru.netology.nmedia.util.SingleLiveEvent
 import kotlin.concurrent.thread
 
@@ -17,12 +17,13 @@ private val empty = Post(
     author = "",
     likedByMe = false,
     likes = 0,
-    published = ""
+    published = "",
+    authorAvatar = null
 )
 
 class PostViewModel(application: Application) : AndroidViewModel(application) {
     // упрощённый вариант
-    private val repository: PostRepository = PostRepositoryImpl()
+    private val repository: PostRepository = PostRepositoryOkHttpImpl()
     private val _data = MutableLiveData(FeedModel())
     val data: LiveData<FeedModel>
         get() = _data
@@ -48,10 +49,9 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
         })
     }
 
-    fun save() {
+    fun save(content: String) {
         val post = edited.value ?: return
         // Сохраняем локальную копию, чтобы избежать изменения во время асинхронного вызова
-        val content = post.content
         val currentPost = post.copy(content = content)
 
         repository.saveAsync(currentPost) { result ->
