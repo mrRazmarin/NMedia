@@ -7,9 +7,8 @@ import androidx.lifecycle.MutableLiveData
 import ru.netology.nmedia.dto.Post
 import ru.netology.nmedia.model.FeedModel
 import ru.netology.nmedia.repository.PostRepository
-import ru.netology.nmedia.repository.PostRepositoryOkHttpImpl
+import ru.netology.nmedia.repository.PostRepositoryRetrofitImpl
 import ru.netology.nmedia.util.SingleLiveEvent
-import kotlin.concurrent.thread
 
 private val empty = Post(
     id = 0,
@@ -22,8 +21,7 @@ private val empty = Post(
 )
 
 class PostViewModel(application: Application) : AndroidViewModel(application) {
-    // упрощённый вариант
-    private val repository: PostRepository = PostRepositoryOkHttpImpl()
+    private val repository: PostRepository = PostRepositoryRetrofitImpl()
     private val _data = MutableLiveData(FeedModel())
     val data: LiveData<FeedModel>
         get() = _data
@@ -31,6 +29,12 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
     private val _postCreated = SingleLiveEvent<Unit>()
     val postCreated: LiveData<Unit>
         get() = _postCreated
+
+    private val _saveFinished = SingleLiveEvent<Unit>()
+    val saveFinished: LiveData<Unit> = _saveFinished
+
+    private val _error = SingleLiveEvent<String>()
+    val error: LiveData<String> = _error
 
     init {
         loadPosts()
@@ -53,26 +57,35 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
         val post = edited.value ?: return
         // Сохраняем локальную копию, чтобы избежать изменения во время асинхронного вызова
         val currentPost = post.copy(content = content)
-
-        repository.saveAsync(currentPost) { result ->
-            if (result.isSuccess) {
-                _postCreated.postValue(Unit)
-            }
-            // В любом случае сбрасываем редактируемый пост
+        if(content.trim() == post.content.trim()) {
             edited.postValue(empty)
+            _saveFinished.postValue(Unit)
+        } else {
+            repository.saveAsync(currentPost) { result ->
+                result.onSuccess {
+                    val oldPosts = _data.value?.posts.orEmpty()
+                    val index = oldPosts.indexOfFirst { it.id == currentPost.id }
+
+                    if (index != -1) {
+                        val newPosts = oldPosts.toMutableList().apply {
+                            set(index, result.getOrNull() ?: currentPost)
+                        }
+                        _data.value = _data.value?.copy(posts = newPosts)
+                    }
+                    _saveFinished.postValue(Unit)
+                }.onFailure {
+                    _error.postValue(result.exceptionOrNull()?.message ?: "Ошибка сохранения")
+                }
+                edited.postValue(empty)
+            }
         }
     }
 
     fun edit(post: Post) {
         edited.value = post
     }
-
-    fun changeContent(content: String) {
-        val text = content.trim()
-        if (edited.value?.content == text) {
-            return
-        }
-        edited.value = edited.value?.copy(content = text)
+    fun editToEmpty() {
+        edited.value = empty
     }
 
     fun toggleLike(post: Post) {
@@ -90,9 +103,7 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
 
         val callback: (Result<Unit>) -> Unit = { result ->
             if (result.isFailure) {
-                // Откат при ошибке
                 _data.value = _data.value?.copy(posts = oldPosts)
-                // Можно также показать сообщение об ошибке через отдельный LiveData
             }
         }
 
@@ -104,7 +115,6 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun removeById(id: Long) {
-        // Оптимистичное удаление
         val old = _data.value?.posts.orEmpty()
         _data.postValue(
             _data.value?.copy(posts = _data.value?.posts.orEmpty()
