@@ -11,19 +11,18 @@ import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import ru.netology.nmedia.dto.Post
+import ru.netology.nmedia.repository.ApiConfig.BASE_URL
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-class PostRepositoryImpl : PostRepository {
+class PostRepositoryOkHttpImpl : PostRepository {
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
         .build()
     private val gson = Gson()
     private val typeToken = object : TypeToken<List<Post>>() {}
 
-    companion object {
-        private const val BASE_URL = "http://10.0.2.2:9999"
-        private val jsonType = "application/json".toMediaType()
+    companion object {private val jsonType = "application/json".toMediaType()
     }
 
     override fun getAll(): List<Post> {
@@ -66,7 +65,7 @@ class PostRepositoryImpl : PostRepository {
 
     override fun getAllAsync(callback: PostRepository.GetAllCallback) {
         val request: Request = Request.Builder()
-            .url("$BASE_URL/api/slow/posts")
+            .url("$BASE_URL/api/posts")
             .build()
         client.newCall(request)
             .enqueue(object : Callback {
@@ -106,7 +105,7 @@ class PostRepositoryImpl : PostRepository {
     override fun saveAsync(post: Post, callback: (Result<Unit>) -> Unit) {
         val request = Request.Builder()
             .post(gson.toJson(post).toRequestBody(jsonType))
-            .url("$BASE_URL/api/slow/posts")
+            .url("$BASE_URL/api/posts")
             .build()
         client.newCall(request).enqueue(object : Callback {
             override fun onResponse(call: Call, response: Response) {
@@ -123,7 +122,7 @@ class PostRepositoryImpl : PostRepository {
     override fun removeByIdAsync(id: Long, callback: (Result<Unit>) -> Unit) {
         val request = Request.Builder()
             .delete()
-            .url("$BASE_URL/api/slow/posts/$id")
+            .url("$BASE_URL/api/posts/$id")
             .build()
         client.newCall(request).enqueue(object : Callback {
             override fun onResponse(call: Call, response: Response) {
@@ -136,4 +135,9 @@ class PostRepositoryImpl : PostRepository {
             }
         })
     }
+}
+
+object ApiConfig {
+    const val BASE_URL = "http://10.0.2.2:9999"
+    const val AVATARS_PATH = "/avatars/"
 }
