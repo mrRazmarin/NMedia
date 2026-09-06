@@ -22,6 +22,7 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 
     buildTypes {
@@ -29,9 +30,13 @@ android {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             manifestPlaceholders["usesCleartextTraffic"] = false
+            buildConfigField("String", "BASE_URL", "\"https://10.0.2.2:9999\"")
+            buildConfigField("String", "BASE_PATH", "\"/api/\"")
         }
         debug {
             manifestPlaceholders["usesCleartextTraffic"] = true
+            buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:9999\"")
+            buildConfigField("String", "BASE_PATH", "\"/api/\"")
         }
     }
     compileOptions {
@@ -45,6 +50,9 @@ kotlin {
 }
 
 dependencies {
+    implementation(libs.logging.interceptor)
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
     implementation(libs.glide)
     implementation(libs.okhttp)
     implementation(libs.androidx.core.ktx)

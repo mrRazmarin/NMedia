@@ -1,6 +1,6 @@
 package ru.netology.nmedia.dto
 
-import ru.netology.nmedia.repository.ApiConfig
+import ru.netology.nmedia.api.ApiConfig
 
 data class Post(
     val id: Long,

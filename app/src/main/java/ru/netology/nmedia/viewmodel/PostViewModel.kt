@@ -40,11 +40,11 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
         _data.value = FeedModel(loading = true)
         repository.getAllAsync(object : PostRepository.GetAllCallback {
             override fun onSuccess(posts: List<Post>) {
-                _data.postValue(FeedModel(posts = posts, empty = posts.isEmpty()))
+                _data.value = FeedModel(posts = posts, empty = posts.isEmpty())
             }
 
-            override fun onError(e: Exception) {
-                _data.postValue(FeedModel(error = true))
+            override fun onError(e: Throwable) {
+                _data.value = FeedModel(error = true)
             }
         })
     }
@@ -75,8 +75,32 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
         edited.value = edited.value?.copy(content = text)
     }
 
-    fun likeById(id: Long) {
-        thread { repository.likeById(id) }
+    fun toggleLike(post: Post) {
+        val oldPosts = _data.value?.posts.orEmpty()
+        val index = oldPosts.indexOfFirst { it.id == post.id }
+        if (index == -1) return
+
+        val updatedPost = post.copy(
+            likedByMe = !post.likedByMe,
+            likes = if (post.likedByMe) post.likes - 1 else post.likes + 1
+        )
+
+        val newPosts = oldPosts.toMutableList().apply { set(index, updatedPost) }
+        _data.value = _data.value?.copy(posts = newPosts)
+
+        val callback: (Result<Unit>) -> Unit = { result ->
+            if (result.isFailure) {
+                // Откат при ошибке
+                _data.value = _data.value?.copy(posts = oldPosts)
+                // Можно также показать сообщение об ошибке через отдельный LiveData
+            }
+        }
+
+        if (updatedPost.likedByMe) {
+            repository.likeByIdAsync(post.id, callback)
+        } else {
+            repository.dislikeByIdAsync(post.id, callback)
+        }
     }
 
     fun removeById(id: Long) {
