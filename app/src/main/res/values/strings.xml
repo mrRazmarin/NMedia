@@ -20,4 +20,6 @@
     <string name="no_posts" translatable="false">no posts</string>
     <string name="error" translatable="false">Error</string>
     <string name="retry_btn" translatable="false">Retry</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="burger_menu" translatable="false">burger_menu</string>
 </resources>
